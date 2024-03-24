@@ -13,16 +13,27 @@ if [ -z $IS_GREEN  ];then # blue라면
   echo "2. green container up"
   docker-compose up -d gateway-green # green 컨테이너 실행
 
-  while [ 1 = 1 ]; do
-  echo "3. green health check..."
-  sleep 3
+  for cnt in {1..10}
+  do
+    echo "3. green health check..."
+    echo "서버 응답 확인중(${cnt}/10)";
 
-  REQUEST=$(curl http://127.0.0.1:8081) # green으로 request
-    if [ -n "$REQUEST" ]; then # 서비스 가능하면 health check 중지
-            echo "health check success"
-            break ;
-            fi
+    REQUEST=$(curl http://127.0.0.1:8081) # green으로 request
+      if [ -n "$REQUEST" ]
+        then # 서비스 가능하면 health check 중지
+          echo "health check success"
+          break ;
+        else
+          sleep 10
+
+      fi
   done;
+
+  if [ $cnt -eq 10 ]
+  then
+  	echo "서버가 정상적으로 구동되지 않았습니다."
+  	exit 1
+  fi
 
   echo "4. reload nginx"
   sudo cp /etc/nginx/conf.d/gateway-green /etc/nginx/conf.d/service-url.inc
@@ -39,16 +50,28 @@ else
   echo "2. blue container up"
   docker-compose up -d gateway-blue
 
-  while [ 1 = 1 ]; do
+  for cnt in {1..10}
+  do
     echo "3. blue health check..."
-    sleep 3
+    echo "서버 응답 확인중(${cnt}/10)";
+
     REQUEST=$(curl http://127.0.0.1:8080) # blue로 request
 
-    if [ -n "$REQUEST" ]; then # 서비스 가능하면 health check 중지
-      echo "health check success"
-      break ;
+    if [ -n "$REQUEST" ]
+      then # 서비스 가능하면 health check 중지
+        echo "health check success"
+        break ;
+      else
+        sleep 10
+
     fi
   done;
+
+  if [ $cnt -eq 10 ]
+  then
+  	echo "서버가 정상적으로 구동되지 않았습니다."
+  	exit 1
+  fi
 
   echo "4. reload nginx"
   sudo cp /etc/nginx/conf.d/gateway-blue /etc/nginx/conf.d/service-url.inc
