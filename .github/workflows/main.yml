@@ -72,9 +72,9 @@ jobs:
         id: deploy-docker
         if: contains(github.ref, 'master')
         with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
             sudo docker ps
