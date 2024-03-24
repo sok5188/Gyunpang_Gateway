@@ -18,5 +18,5 @@ logging:
   level:
     com.gyunpang.gateway : DEBUG
 
-container:
-  color: ${CONTAINER_COLOR}
+#container:
+#  color: ${CONTAINER_COLOR}

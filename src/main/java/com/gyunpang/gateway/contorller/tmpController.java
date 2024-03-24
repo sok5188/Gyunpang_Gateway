@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Controller
 public class tmpController {
 
-	@Value("${container.color}")
+	@Value("${CONTAINER_COLOR}")
 	private String colorInfo;
 	@RequestMapping("/health")
 	public ResponseEntity<String> healthCheck(){
@@ -18,7 +18,6 @@ public class tmpController {
 
 	@RequestMapping("/color")
 	public ResponseEntity<String> colorCheck(){
-		String color = System.getProperty("color");
-		return ResponseEntity.ok(color);
+		return ResponseEntity.ok(colorInfo);
 	}
 }
