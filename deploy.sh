@@ -7,10 +7,10 @@ if [ -z $IS_GREEN  ];then # blue라면
   echo "### BLUE => GREEN ###"
 
   echo "1. get green image"
-  docker-compose pull gateway-green # green으로 이미지를 내려받습니다.
+  docker compose pull gateway-green # green으로 이미지를 내려받습니다.
 
   echo "2. green container up"
-  docker-compose up -d gateway-green # green 컨테이너 실행
+  docker compose up -d gateway-green # green 컨테이너 실행
 
   for cnt in {1..10}
   do
@@ -39,15 +39,15 @@ if [ -z $IS_GREEN  ];then # blue라면
   sudo nginx -s reload
 
   echo "5. blue container down"
-  docker-compose stop gateway-blue
+  docker compose stop gateway-blue
 else
   echo "### GREEN => BLUE ###"
 
   echo "1. get blue image"
-  docker-compose pull gateway-blue
+  docker compose pull gateway-blue
 
   echo "2. blue container up"
-  docker-compose up -d gateway-blue
+  docker compose up -d gateway-blue
 
   for cnt in {1..10}
   do
@@ -77,5 +77,5 @@ else
   sudo nginx -s reload
 
   echo "5. green container down"
-  docker-compose stop gateway-green
+  docker compose stop gateway-green
 fi
