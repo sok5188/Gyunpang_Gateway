@@ -10,4 +10,10 @@ public class tmpController {
 	public ResponseEntity<String> healthCheck(){
 		return ResponseEntity.ok("alive");
 	}
+
+	@RequestMapping("/color")
+	public ResponseEntity<String> colorCheck(){
+		String color = System.getProperty("color");
+		return ResponseEntity.ok(color);
+	}
 }

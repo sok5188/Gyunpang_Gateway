@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  gateway-blue:
+    image: sok5188/gyunpang-gateway:latest
+    container_name: gateway-blue
+    environment:
+      - COLOR:blue
+    ports:
+      - "8080:8080"
+
+  gateway-green:
+    image: sok5188/gyunpang-gateway:latest
+    container_name: gateway-green
+    environment:
+      - COLOR:green
+    ports:
+      - "8081:8080"
