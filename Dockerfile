@@ -1,14 +1,16 @@
-FROM gradle:7.4.0-jdk17 AS builder
-LABEL authors="sin-wongyun"
+FROM amazoncorretto:17-al2-jdk AS builder
+LABEL authors="sok5188"
 
+RUN mkdir /gateway
 WORKDIR /gateway
 
 COPY . .
 
-RUN gradle clean build --no-daemon
+FROM amazoncorretto:17.0.10-alpine
 
-FROM adoptopenjdk/openjdk17:jdk-17.0.2_8-alpine
+ENV TZ=Asia/Seoul
 
+RUN mkdir /gateway
 WORKDIR /gateway
 
 COPY --from=builder /gateway/build/libs/*.jar app.jar
