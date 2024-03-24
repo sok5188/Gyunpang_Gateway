@@ -13,9 +13,6 @@ ENV TZ=Asia/Seoul
 RUN mkdir /gateway
 WORKDIR /gateway
 
-ARG COLOR
-ENV COLOR=${COLOR}
-
 COPY --from=builder /gateway/build/libs/*.jar app.jar
 
-CMD ["java","-Dcolor=${COLOR}", "-jar", "app.jar"]
+CMD ["java", "-jar", "app.jar"]
