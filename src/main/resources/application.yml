@@ -17,3 +17,6 @@ server:
 logging:
   level:
     com.gyunpang.gateway : DEBUG
+
+container:
+  color: ${CONTAINER_COLOR}

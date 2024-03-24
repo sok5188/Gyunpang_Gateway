@@ -5,7 +5,7 @@ services:
     image: sok5188/gyunpang-gateway:latest
     container_name: gateway-blue
     environment:
-      - COLOR:blue
+      - CONTAINER_COLOR:blue
     ports:
       - "8080:8080"
 
@@ -13,6 +13,6 @@ services:
     image: sok5188/gyunpang-gateway:latest
     container_name: gateway-green
     environment:
-      - COLOR:green
+      - CONTAINER_COLOR:green
     ports:
       - "8081:8080"
