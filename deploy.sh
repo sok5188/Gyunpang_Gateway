@@ -36,7 +36,7 @@ if [ -z $IS_GREEN  ];then # blue라면
   fi
 
   echo "4. reload nginx"
-  sudo cp /etc/nginx/conf.d/gateway-green /etc/nginx/conf.d/service-url.inc
+  sudo cp /etc/nginx/conf.d/gateway-green-url /etc/nginx/conf.d/service-url.inc
   sudo nginx -s reload
 
   echo "5. blue container down"
@@ -74,7 +74,7 @@ else
   fi
 
   echo "4. reload nginx"
-  sudo cp /etc/nginx/conf.d/gateway-blue /etc/nginx/conf.d/service-url.inc
+  sudo cp /etc/nginx/conf.d/gateway-blue-url /etc/nginx/conf.d/service-url.inc
   sudo nginx -s reload
 
   echo "5. green container down"
