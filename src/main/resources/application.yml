@@ -1,1 +1,19 @@
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: main
+          uri: http://localhost:8080
+          predicates:
+            - Path=/main-api/**
+          filters:
+            - AddRequestHeader=second-request, second-request-header
+            - AddResponseHeader=second-response, second-response-header
+            - CustomAuthFilter
+            - RewritePath=/main-api/(?<path>.*),/$\{path}
 
+server:
+  port: 8080
+logging:
+  level:
+    com.gyunpang.gateway : DEBUG
