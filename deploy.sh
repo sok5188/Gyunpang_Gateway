@@ -28,9 +28,8 @@ do
   echo "3. new container health check..."
   echo "서버 응답 확인중(${cnt}/10)";
 
-  STATUS=$(curl http://127.0.0.1:${NEW_PORT}/healthCheck)
-    if [ $STATUS -eq 200 ]
-      then
+  REQUEST=$(curl http://127.0.0.1:${NEW_PORT}/healthCheck)
+  if [ -n "$REQUEST" ]; then
         echo "health check success"
         break ;
       else
