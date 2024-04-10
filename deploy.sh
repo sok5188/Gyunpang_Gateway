@@ -12,8 +12,8 @@ if [ -z "$IS_GREEN" ]; then # blue라면
 else
   echo "### GREEN => BLUE ###"
 
-  OLD_CONTAINER='be-green'
-  NEW_CONTAINER='be-blue'
+  OLD_CONTAINER='gateway-green'
+  NEW_CONTAINER='gateway-blue'
   NEW_PORT='8080'
 fi
 
