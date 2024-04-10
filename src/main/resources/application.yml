@@ -2,21 +2,43 @@ spring:
   cloud:
     gateway:
       routes:
-        - id: main
-          uri: http://localhost:8080
+        - id: open-service
+          uri: lb://backend-service
           predicates:
-            - Path=/main-api/**
+            - Path=/open/**
+
+        - id: backend-route
+          uri: lb://backend-service
+          predicates:
+            - Path=/**
           filters:
-            - AddRequestHeader=second-request, second-request-header
-            - AddResponseHeader=second-response, second-response-header
-            - CustomAuthFilter
-            - RewritePath=/main-api/(?<path>.*),/$\{path}
+            - name: CustomAuthFilter
+              args:
+                headerName: Authorization
+                granted: Bearer
+    loadbalancer:
+      configurations: health-check
+    discovery:
+      client:
+        simple:
+          instances:
+            backend-service:
+              - secure: false
+                port: 80
+                host: address_be1
+                serviceId: backend-service
+                instanceId: backend-service-1
+              - secure: false
+                port: 80
+                host: address_be2
+                serviceId: backend-service
+                instanceId: backend-service-2
 
 server:
   port: 8080
 logging:
   level:
-    com.gyunpang.gateway : DEBUG
+    com : DEBUG
 
-#container:
-#  color: ${CONTAINER_COLOR}
+jwt:
+  secret: jwtsecretjwtsecretjwtsecretjwtsecretjwtsecretjwtsecretjwtsecretjwtsecret

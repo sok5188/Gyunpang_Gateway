@@ -4,10 +4,14 @@ import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 
+import com.gyunpang.gateway.utils.CommonCode;
+
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
@@ -15,38 +19,40 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class CustomAuthFilter extends AbstractGatewayFilterFactory<CustomAuthFilter.Config> {
 
-	public CustomAuthFilter(){
+	private final TokenProvider tokenProvider;
+	public CustomAuthFilter(TokenProvider tokenProvider){
 		super(Config.class);
-		log.debug("[Filter] CustomAuthFilter invoked");
+		this.tokenProvider = tokenProvider;
 	}
-
 	@Override
 	public GatewayFilter apply(Config config) {
-		return ((exchange, chain) -> {
-			log.debug("[Filter] got request");
-			ServerHttpRequest request = exchange.getRequest();
-
-			// Request Header 에 token 이 존재하지 않을 때
-			if(!request.getHeaders().containsKey("token")){
-				return unAuthrizeHandler(exchange); // 401 Error
+		return (exchange, chain) -> {
+			String authorizationHeader = exchange.getRequest().getHeaders().getFirst(config.headerName);
+			if (StringUtils.hasText(authorizationHeader) && authorizationHeader.startsWith(config.granted+" ")) {
+				String token = authorizationHeader.substring(7); // Bearer
+				try {
+					String username = tokenProvider.validateTokenAndGetUsername(token);
+					ServerHttpRequest request = exchange.getRequest();
+					request.mutate().header(CommonCode.HEADER_USERNAME.getContext(),username);
+					request.mutate().headers(httpHeaders -> httpHeaders.remove("Authorization"));
+					return chain.filter(exchange);
+				} catch (Exception e) {
+					log.error("Token validation error: {}, class : {}", e.getMessage(), e.getClass());
+				}
 			}
-
-			log.debug("[Filter] request is valid");
-
-			return chain.filter(exchange); // 토큰이 일치할 때
-
-		});
+			return unauthorizedResponse(exchange); // Token is not valid, respond with unauthorized
+		};
 	}
 
-	private Mono<Void> unAuthrizeHandler(ServerWebExchange exchange) {
-		ServerHttpResponse response = exchange.getResponse();
-
-		response.setStatusCode(HttpStatus.UNAUTHORIZED);
-		log.debug("[Filter] unAuthorized !!");
-		return response.setComplete();
+	private Mono<Void> unauthorizedResponse(ServerWebExchange exchange) {
+		exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+		return exchange.getResponse().setComplete();
 	}
 
+	@Getter
+	@Setter
 	public static class Config{
-
+		private String headerName; // Authorization
+		private String granted; // Bearer
 	}
 }
