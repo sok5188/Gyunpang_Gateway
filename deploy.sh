@@ -17,9 +17,9 @@ if [ -z "$IS_GREEN" ]; then # blue라면
     echo "3. green health check..."
     echo "서버 응답 확인중(${cnt}/10)";
 
-    REQUEST=$(curl http://127.0.0.1:8081) # green으로 request
-      if [ -n "$REQUEST" ]
-        then # 서비스 가능하면 health check 중지
+    STATUS=$(curl http://127.0.0.1:8081/healthCheck)
+      if [ "$STATUS" -eq 200 ]
+        then
           echo "health check success"
           break ;
         else
@@ -54,10 +54,9 @@ else
     echo "3. blue health check..."
     echo "서버 응답 확인중(${cnt}/10)";
 
-    REQUEST=$(curl http://127.0.0.1:8080) # blue로 request
-
-    if [ -n "$REQUEST" ]
-      then # 서비스 가능하면 health check 중지
+    STATUS=$(curl http://127.0.0.1:8080/healthCheck)
+    if [ "$STATUS" -eq 200 ]
+      then
         echo "health check success"
         break ;
       else
