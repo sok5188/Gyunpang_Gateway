@@ -1,4 +1,6 @@
 spring:
+  kafka:
+    bootstrap-servers: {kafka-server}
   cloud:
     gateway:
       routes:
@@ -39,6 +41,10 @@ server:
 logging:
   level:
     com : DEBUG
+
+kafka:
+  topic:
+    log: GatewayAPI
 
 jwt:
   secret: jwtsecretjwtsecretjwtsecretjwtsecretjwtsecretjwtsecretjwtsecretjwtsecret
