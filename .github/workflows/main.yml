@@ -31,6 +31,7 @@ jobs:
           files: ${{ env.RESOURCE_PATH }}
         env:
           jwt.secret: ${{secrets.JWT_SECRET}}
+          spring.kafka.bootstrap-servers: ${{secrets.KAFKA_SERVER}}
 
       - name: Set Backend Addresses
         run: |
