@@ -3,6 +3,7 @@ package com.gyunpang.gateway.filters;
 import java.io.ByteArrayOutputStream;
 import java.nio.channels.Channels;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,40 +44,54 @@ public class LoggingGlobalFilter implements GlobalFilter, Ordered {
 	private final KafkaMessageProduceEventPublisher kafkaMessageProduceEventPublisher;
 	@Value(value = "${kafka.topic.log}")
 	private String logTopic;
+
 	@Override
 	public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 
 		Map<String, Object> requestMap = new HashMap<>();
 		Map<String, Object> responseMap = new HashMap<>();
+		putCommonProperty(exchange, requestMap);
+		putCommonProperty(exchange, responseMap);
 		ServerHttpRequest request = getDecoratedRequest(exchange, requestMap);
 		ServerHttpResponse response = getDecoratedResponse(exchange, responseMap);
 
 		return chain.filter(exchange.mutate().request(request).response(response).build())
 			.doOnError(err -> {
-				log.error("err !"+err.getMessage());
-				kafkaMessageProduceEventPublisher.publishKafkaMessage(KafkaMessageProduceEvent.builder().topic(logTopic).context("["+exchange.getRequest().getId()+"]"+" ERROR message : "+err.getMessage()).build());
+				log.error("err !" + err.getMessage());
+				Map<String, Object> errMap = new HashMap<>();
+				putCommonProperty(exchange, errMap);
+				errMap.put("type", "error");
+				errMap.put("status_code", response.getStatusCode());
+				errMap.put("body", err.getMessage());
+
+				sendLogMessage(errMap);
 			})
 			.then(Mono.fromRunnable(() -> {
-				StringBuilder sb = new StringBuilder();
+				requestMap.put("type", "request");
+				sendLogMessage(requestMap);
 
-				sb.append("[").append(exchange.getRequest().getId()).append("] request info : { ");
-				sendLogMessage(requestMap, sb);
-
-				sb = new StringBuilder();
-				sb.append("[").append(exchange.getRequest().getId()).append("] response status : ").append(response.getStatusCode()).append(" response info : { ");
-				sendLogMessage(responseMap, sb);
+				responseMap.put("status_code", response.getStatusCode());
+				requestMap.put("type", "response");
+				sendLogMessage(responseMap);
 
 			}));
 	}
 
-	private void sendLogMessage(Map<String, Object> responseMap, StringBuilder sb) {
+	private void sendLogMessage(Map<String, Object> responseMap) {
+		StringBuilder sb = new StringBuilder();
+
 		for (String key : responseMap.keySet()) {
-			sb.append(key).append(" : ").append(responseMap.get(key)).append(" ");
+			sb.append(key)
+				.append(":")
+				.append(responseMap.get(key))
+				.append(" ; ");
 		}
-		sb.append("}");
+
 		log.info(sb.toString());
-		kafkaMessageProduceEventPublisher.publishKafkaMessage(KafkaMessageProduceEvent.builder().topic(logTopic).context(
-			sb.toString()).build());
+
+		kafkaMessageProduceEventPublisher.publishKafkaMessage(
+			KafkaMessageProduceEvent.builder().topic(logTopic).context(
+				sb.toString()).build());
 	}
 
 	@Override
@@ -84,23 +99,31 @@ public class LoggingGlobalFilter implements GlobalFilter, Ordered {
 		return -1;
 	}
 
-
-
-	private ServerHttpRequest getDecoratedRequest(ServerWebExchange exchange, Map<String, Object> requestMap) {
-
+	private void putCommonProperty(ServerWebExchange exchange, Map<String, Object> map) {
 		ServerHttpRequest request = exchange.getRequest();
-		requestMap.put("method", request.getMethod());
-		requestMap.put("uri",request.getURI());
 
-		if(!request.getQueryParams().isEmpty())
-			requestMap.put("query", request.getQueryParams());
+		map.put("method", request.getMethod());
+		map.put("request_id", request.getId());
+		map.put("create_dt", LocalDateTime.now());
+
+		String uri = request.getURI().getPath();
+		if (request.getURI().getQuery() != null) {
+			uri += "/";
+			uri += request.getURI().getQuery();
+		}
+		map.put("uri", uri);
 
 		Route route = exchange.getAttribute(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR);
 
 		if (route != null) {
-			requestMap.put("routeId", route.getId());
-			requestMap.put("routeUri", route.getUri());
+			map.put("routeId", route.getId());
+			map.put("routeUri", route.getUri());
 		}
+	}
+
+	private ServerHttpRequest getDecoratedRequest(ServerWebExchange exchange, Map<String, Object> requestMap) {
+
+		ServerHttpRequest request = exchange.getRequest();
 
 		return new ServerHttpRequestDecorator(request) {
 			@Override
@@ -109,7 +132,8 @@ public class LoggingGlobalFilter implements GlobalFilter, Ordered {
 					try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
 
 						Channels.newChannel(byteArrayOutputStream).write(dataBuffer.asByteBuffer().asReadOnlyBuffer());
-						String requestBody = removeWhiteSpacesFromJson(byteArrayOutputStream.toString(StandardCharsets.UTF_8));
+						String requestBody = removeWhiteSpacesFromJson(
+							byteArrayOutputStream.toString(StandardCharsets.UTF_8));
 						requestMap.put("body", requestBody);
 
 					} catch (Exception e) {
@@ -131,7 +155,7 @@ public class LoggingGlobalFilter implements GlobalFilter, Ordered {
 			public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
 
 				if (body instanceof Flux) {
-					Flux<? extends DataBuffer> fluxBody = (Flux<? extends DataBuffer>) body;
+					Flux<? extends DataBuffer> fluxBody = (Flux<? extends DataBuffer>)body;
 
 					return super.writeWith(fluxBody.buffer().map(dataBuffers -> {
 
@@ -146,8 +170,8 @@ public class LoggingGlobalFilter implements GlobalFilter, Ordered {
 						log.error(err.getMessage());
 						return Mono.empty();
 					});
-				}else{
-					log.warn(exchange.getRequest().getId()+ "'s response has no body");
+				} else {
+					log.debug(exchange.getRequest().getId() + "'s response has no body");
 				}
 				return super.writeWith(body);
 			}
