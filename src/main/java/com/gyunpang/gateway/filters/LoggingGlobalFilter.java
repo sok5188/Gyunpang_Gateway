@@ -61,7 +61,7 @@ public class LoggingGlobalFilter implements GlobalFilter, Ordered {
 				Map<String, Object> errMap = new HashMap<>();
 				putCommonProperty(exchange, errMap);
 				errMap.put("type", "error");
-				errMap.put("status_code", response.getStatusCode());
+				errMap.put("statusCode", response.getStatusCode());
 				errMap.put("body", err.getMessage());
 
 				sendLogMessage(errMap);
@@ -70,8 +70,8 @@ public class LoggingGlobalFilter implements GlobalFilter, Ordered {
 				requestMap.put("type", "request");
 				sendLogMessage(requestMap);
 
-				responseMap.put("status_code", response.getStatusCode());
-				requestMap.put("type", "response");
+				responseMap.put("statusCode", response.getStatusCode());
+				responseMap.put("type", "response");
 				sendLogMessage(responseMap);
 
 			}));
@@ -82,9 +82,9 @@ public class LoggingGlobalFilter implements GlobalFilter, Ordered {
 
 		for (String key : responseMap.keySet()) {
 			sb.append(key)
-				.append(":")
+				.append("`:`")
 				.append(responseMap.get(key))
-				.append(" ; ");
+				.append("`;`");
 		}
 
 		log.info(sb.toString());
@@ -103,8 +103,8 @@ public class LoggingGlobalFilter implements GlobalFilter, Ordered {
 		ServerHttpRequest request = exchange.getRequest();
 
 		map.put("method", request.getMethod());
-		map.put("request_id", request.getId());
-		map.put("create_dt", LocalDateTime.now());
+		map.put("requestId", request.getId());
+		map.put("createDt", LocalDateTime.now());
 
 		String uri = request.getURI().getPath();
 		if (request.getURI().getQuery() != null) {
