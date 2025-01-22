@@ -1,7 +1,9 @@
 package com.gyunpang.gateway.contorller;
 
 import java.util.Map;
+import java.util.Optional;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -30,23 +32,25 @@ public class AuthController {
 		AuthDto.SignInRes res = AuthDto.SignInRes.builder().build();
 		if (headers.containsKey(GatewayConstant.ACCESS_HEADER)) {
 			res = authService.trySignInWithToken(headers.get(GatewayConstant.ACCESS_HEADER));
-			if (res.getFailReason().isEmpty()) {
-				return ResponseEntity.ok(res);
-			}
 		}
-		if (headers.containsKey(GatewayConstant.REFRESH_HEADER)) {
+		if (Optional.ofNullable(res.getAccessToken()).isEmpty() && headers.containsKey(
+			GatewayConstant.REFRESH_HEADER)) {
 			res = authService.trySignInWithToken(headers.get(GatewayConstant.REFRESH_HEADER));
-			if (res.getFailReason().isEmpty()) {
-				return ResponseEntity.ok(res);
-			}
 		}
-		if (authService.trySignInWithPassword(req)) {
+		if (Optional.ofNullable(res.getAccessToken()).isEmpty() && authService.trySignInWithPassword(req)) {
 			res = authService.getAuthTokens(req.getUsername());
-			if (res.getFailReason().isEmpty()) {
-				return ResponseEntity.ok(res);
-			}
 		}
 
-		return ResponseEntity.badRequest().body(res);
+		if (Optional.ofNullable(res.getAccessToken()).isPresent()) {
+			HttpHeaders httpHeaders = new HttpHeaders();
+			httpHeaders.set(GatewayConstant.ACCESS_HEADER, res.getAccessToken());
+			httpHeaders.set(GatewayConstant.REFRESH_HEADER, res.getRefreshToken());
+			return ResponseEntity
+				.ok()
+				.headers(httpHeaders)
+				.body(res);
+		} else {
+			return ResponseEntity.badRequest().body(res);
+		}
 	}
 }

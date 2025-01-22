@@ -1,9 +1,9 @@
 package com.gyunpang.gateway.utils;
 
 import java.security.Key;
-import java.sql.Date;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.Date;
 
 import javax.crypto.SecretKey;
 
@@ -33,8 +33,15 @@ public class JwtUtil {
 	}
 
 	public AuthDto.SignInRes generateToken(String username) {
-		String accessToken = createToken(username, Date.valueOf(String.valueOf(LocalDateTime.now().plusMinutes(30))));
-		String refreshToken = createToken(username, Date.valueOf(String.valueOf(LocalDateTime.now().plusDays(10))));
+		String accessToken = createToken(username,
+			Date.from(
+				LocalDateTime.now().plusMinutes(30).toInstant(ZoneOffset.ofHours(9))
+			));
+		String refreshToken = createToken(username,
+			Date.from(
+				LocalDateTime.now().plusDays(10)
+					.toInstant(ZoneOffset.ofHours(9))
+			));
 		return AuthDto.SignInRes.builder()
 			.accessToken(accessToken)
 			.refreshToken(refreshToken)
@@ -44,7 +51,7 @@ public class JwtUtil {
 	private String createToken(String subject, Date expireDate) {
 		return Jwts.builder()
 			.subject(subject)
-			.issuedAt(Date.valueOf(LocalDate.now()))
+			.issuedAt(Date.from(LocalDateTime.now().toInstant(ZoneOffset.ofHours(9))))
 			.expiration(expireDate)
 			.signWith(key)
 			.compact();

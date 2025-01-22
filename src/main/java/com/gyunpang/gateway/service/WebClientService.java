@@ -1,5 +1,6 @@
 package com.gyunpang.gateway.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -16,8 +17,12 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class WebClientService {
 	private final WebClient webClient;
+	@Value(value = "${api.backend-scheme}")
+	private String backendScheme;
+	@Value(value = "${api.backend-host}")
+	private String backendHost;
 
-	public String sendSignInRequest(AuthDto.SignInReq req) {
+	public Mono<String> sendSignInRequest(AuthDto.SignInReq req) {
 		return getWebClient()
 			.put()
 			.uri("/open/signIn")
@@ -26,13 +31,12 @@ public class WebClientService {
 			.bodyValue(req)
 			.retrieve()
 			.bodyToMono(String.class)
-			.onErrorResume(Mono::error)
-			.block();
+			.onErrorResume(Mono::error);
 	}
 
 	private WebClient getWebClient() {
-		String baseUrl = UriComponentsBuilder.newInstance().scheme("https")
-			.host("localhost:8080")
+		String baseUrl = UriComponentsBuilder.newInstance().scheme(backendScheme)
+			.host(backendHost)
 			.build().toString();
 		return webClient.mutate().baseUrl(baseUrl).build();
 	}
