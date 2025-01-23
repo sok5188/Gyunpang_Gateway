@@ -20,20 +20,22 @@ import reactor.core.publisher.Mono;
 public class CustomAuthFilter extends AbstractGatewayFilterFactory<CustomAuthFilter.Config> {
 
 	private final TokenProvider tokenProvider;
-	public CustomAuthFilter(TokenProvider tokenProvider){
+
+	public CustomAuthFilter(TokenProvider tokenProvider) {
 		super(Config.class);
 		this.tokenProvider = tokenProvider;
 	}
+
 	@Override
 	public GatewayFilter apply(Config config) {
 		return (exchange, chain) -> {
 			String authorizationHeader = exchange.getRequest().getHeaders().getFirst(config.headerName);
-			if (StringUtils.hasText(authorizationHeader) && authorizationHeader.startsWith(config.granted+" ")) {
+			if (StringUtils.hasText(authorizationHeader) && authorizationHeader.startsWith(config.granted + " ")) {
 				String token = authorizationHeader.substring(7); // Bearer
 				try {
 					String username = tokenProvider.validateTokenAndGetUsername(token);
 					ServerHttpRequest request = exchange.getRequest();
-					request.mutate().header(CommonCode.HEADER_USERNAME.getContext(),username);
+					request.mutate().header(CommonCode.HEADER_USERNAME.getContext(), username);
 					request.mutate().headers(httpHeaders -> httpHeaders.remove("Authorization"));
 					return chain.filter(exchange);
 				} catch (Exception e) {
@@ -45,13 +47,14 @@ public class CustomAuthFilter extends AbstractGatewayFilterFactory<CustomAuthFil
 	}
 
 	private Mono<Void> unauthorizedResponse(ServerWebExchange exchange) {
+		log.info("Custom Auth Filter will make 401 response");
 		exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
 		return exchange.getResponse().setComplete();
 	}
 
 	@Getter
 	@Setter
-	public static class Config{
+	public static class Config {
 		private String headerName; // Authorization
 		private String granted; // Bearer
 	}
