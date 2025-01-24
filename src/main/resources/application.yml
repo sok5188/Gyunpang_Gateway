@@ -19,12 +19,6 @@ spring:
               - DELETE
               - OPTIONS
       routes:
-        - id: gateway-service
-          uri: http://localhost:8080
-          predicates:
-            Path=/gateway/**
-          order: 0
-
         - id: open-service
           uri: lb://backend-service
           predicates:
