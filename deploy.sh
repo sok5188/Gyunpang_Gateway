@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IS_GREEN=$(docker ps | grep green) # 현재 실행중인 App이 blue인지 확인합니다.
+IS_GREEN=$(sudo docker ps | grep green) # 현재 실행중인 App이 blue인지 확인합니다.
 
 if [ -z "$IS_GREEN" ]; then # blue라면
   echo "### BLUE => GREEN ###"
@@ -18,10 +18,10 @@ else
 fi
 
 echo "1. get new image"
-docker compose pull $NEW_CONTAINER
+sudo docker compose pull $NEW_CONTAINER
 
 echo "2. new container up"
-docker compose up -d $NEW_CONTAINER
+sudo docker compose up -d $NEW_CONTAINER
 
 for cnt in {1..10}
 do
@@ -49,4 +49,4 @@ sudo cp /etc/nginx/conf.d/${NEW_CONTAINER}-url /etc/nginx/conf.d/service-url.inc
 sudo nginx -s reload
 
 echo "5. old container down"
-docker compose stop $OLD_CONTAINER
+sudo docker compose stop $OLD_CONTAINER
