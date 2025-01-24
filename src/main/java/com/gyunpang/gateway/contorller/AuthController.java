@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @RequestMapping("/gateway")
 @CrossOrigin(origins = {"https://localhost:3000", "https://sirong.shop"}
-	, methods = {RequestMethod.GET, RequestMethod.PUT, RequestMethod.POST}
+	, methods = {RequestMethod.GET, RequestMethod.PUT, RequestMethod.POST, RequestMethod.OPTIONS}
 	, exposedHeaders = {GatewayConstant.ACCESS_TOKEN, HttpHeaders.SET_COOKIE}
 	, allowCredentials = "true")
 public class AuthController {
@@ -69,5 +69,10 @@ public class AuthController {
 			log.info("fail");
 			return ResponseEntity.badRequest().body(res);
 		}
+	}
+
+	@PostMapping("/post")
+	public ResponseEntity<String> postTest(@RequestBody AuthDto.SignInReq req) {
+		return ResponseEntity.ok("Got Body " + req.getUsername());
 	}
 }
