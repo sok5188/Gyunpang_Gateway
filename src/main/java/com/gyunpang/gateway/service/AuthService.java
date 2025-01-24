@@ -16,7 +16,7 @@ public class AuthService {
 	private final WebClientService webClientService;
 
 	public AuthDto.SignInRes trySignInWithToken(String token) {
-		return jwtUtil.validateToken(token);
+		return jwtUtil.tryRefreshToken(token);
 	}
 
 	public boolean trySignInWithPassword(AuthDto.SignInReq req) {
@@ -29,5 +29,9 @@ public class AuthService {
 
 	public AuthDto.SignInRes getAuthTokens(String username) {
 		return jwtUtil.generateToken(username);
+	}
+
+	public boolean validateToken(String token) {
+		return jwtUtil.validateToken(token);
 	}
 }

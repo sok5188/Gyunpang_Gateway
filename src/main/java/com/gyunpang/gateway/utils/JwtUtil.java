@@ -61,7 +61,23 @@ public class JwtUtil {
 		return Jwts.parser().verifyWith((SecretKey)key).build().parseSignedClaims(token);
 	}
 
-	public AuthDto.SignInRes validateToken(String token) {
+	public boolean validateToken(String token) {
+		try {
+			getClaims(token);
+			return true;
+		} catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
+			log.warn("잘못된 JWT 서명입니다.");
+		} catch (ExpiredJwtException e) {
+			log.warn("만료된 JWT 토큰입니다.");
+		} catch (UnsupportedJwtException e) {
+			log.warn("지원되지 않는 JWT 토큰입니다.");
+		} catch (IllegalArgumentException e) {
+			log.warn("JWT 토큰이 잘못되었습니다.");
+		}
+		return false;
+	}
+
+	public AuthDto.SignInRes tryRefreshToken(String token) {
 		String failReason = "";
 		try {
 			Jws<Claims> claims = getClaims(token);
