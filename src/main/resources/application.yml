@@ -23,11 +23,13 @@ spring:
           uri: http://localhost:8080
           predicates:
             Path=/gateway/**
+          order: 0
 
         - id: open-service
           uri: lb://backend-service
           predicates:
             - Path=/open/**
+          order: 1
 
         - id: backend-route
           uri: lb://backend-service
@@ -38,6 +40,7 @@ spring:
               args:
                 headerName: Authorization
                 granted: Bearer
+          order: 2
     loadbalancer:
       configurations: health-check
     discovery:
