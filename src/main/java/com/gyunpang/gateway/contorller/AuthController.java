@@ -1,18 +1,26 @@
 package com.gyunpang.gateway.contorller;
 
+import java.time.Duration;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
+import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.server.ServerWebExchange;
 
 import com.gyunpang.gateway.dto.AuthDto;
 import com.gyunpang.gateway.service.AuthService;
@@ -26,7 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @RequestMapping("/gateway")
 @CrossOrigin(origins = {"https://localhost:3000", "https://sirong.shop"}
-	, methods = {RequestMethod.GET, RequestMethod.PUT, RequestMethod.POST, RequestMethod.OPTIONS}
+	, methods = {RequestMethod.GET, RequestMethod.PUT, RequestMethod.POST, RequestMethod.DELETE, RequestMethod.OPTIONS}
 	, exposedHeaders = {GatewayConstant.ACCESS_TOKEN, HttpHeaders.SET_COOKIE}
 	, allowCredentials = "true")
 public class AuthController {
@@ -35,16 +43,21 @@ public class AuthController {
 
 	@PostMapping("/signin")
 	public ResponseEntity<AuthDto.SignInRes> signIn(@RequestHeader Map<String, String> headers,
-		@RequestBody AuthDto.SignInReq req) {
+		@RequestBody AuthDto.SignInReq req, ServerWebExchange exchange) {
 		log.info("try sign in");
 		AuthDto.SignInRes res = AuthDto.SignInRes.builder().build();
+		MultiValueMap<String, HttpCookie> cookies = exchange.getRequest().getCookies();
+
+		//Try With AccessToken
 		if (headers.containsKey(GatewayConstant.ACCESS_TOKEN)) {
 			res = authService.trySignInWithToken(headers.get(GatewayConstant.ACCESS_TOKEN));
 		}
-		if (Optional.ofNullable(res.getAccessToken()).isEmpty() && headers.containsKey(
-			GatewayConstant.REFRESH_TOKEN)) {
-			res = authService.trySignInWithToken(headers.get(GatewayConstant.REFRESH_TOKEN));
+		//Try With RefreshToken
+		if (Optional.ofNullable(res.getAccessToken()).isEmpty() && cookies.containsKey(GatewayConstant.REFRESH_TOKEN)) {
+			res = authService.trySignInWithToken(
+				Objects.requireNonNull(cookies.getFirst(GatewayConstant.REFRESH_TOKEN)).getValue());
 		}
+		//Try With auth info
 		if (Optional.ofNullable(res.getAccessToken()).isEmpty() && authService.trySignInWithPassword(req)) {
 			res = authService.getAuthTokens(req.getUsername());
 		}
@@ -57,10 +70,55 @@ public class AuthController {
 				.httpOnly(true)
 				.secure(true)
 				.sameSite("None")
-				.maxAge(10000)
+				.maxAge(Duration.ofDays(10))
 				.build();
 			httpHeaders.set(HttpHeaders.SET_COOKIE, cookie.toString());
-			log.info("success");
+			return ResponseEntity
+				.ok()
+				.headers(httpHeaders)
+				.body(res);
+		} else {
+			log.info("fail");
+			return ResponseEntity.badRequest().body(res);
+		}
+	}
+
+	@DeleteMapping("/signout")
+	public ResponseEntity<String> signOut(ServerWebExchange exchange) {
+		ResponseCookie cookie = ResponseCookie.from(GatewayConstant.REFRESH_TOKEN, "")
+			.maxAge(0) // 쿠키 만료
+			.path("/") // 쿠키의 경로 설정 (서버에서 쿠키 설정한 경로와 동일해야 함)
+			.httpOnly(true) // HTTPOnly 쿠키 설정
+			.secure(true)   // HTTPS에서만 쿠키 사용
+			.build();
+
+		return ResponseEntity.ok()
+			.header(HttpHeaders.SET_COOKIE, cookie.toString())
+			.body("로그아웃 완료");
+	}
+
+	@PutMapping("/refresh")
+	public ResponseEntity<AuthDto.SignInRes> refreshToken(ServerWebExchange exchange) {
+		log.info("try sign in");
+		AuthDto.SignInRes res = AuthDto.SignInRes.builder().build();
+		MultiValueMap<String, HttpCookie> cookies = exchange.getRequest().getCookies();
+
+		if (Optional.ofNullable(res.getAccessToken()).isEmpty() && cookies.containsKey(GatewayConstant.REFRESH_TOKEN)) {
+			res = authService.trySignInWithToken(
+				Objects.requireNonNull(cookies.getFirst(GatewayConstant.REFRESH_TOKEN)).getValue());
+		}
+
+		if (Optional.ofNullable(res.getAccessToken()).isPresent()) {
+			HttpHeaders httpHeaders = new HttpHeaders();
+			httpHeaders.set(GatewayConstant.ACCESS_TOKEN, res.getAccessToken());
+
+			ResponseCookie cookie = ResponseCookie.from(GatewayConstant.REFRESH_TOKEN, res.getRefreshToken())
+				.httpOnly(true)
+				.secure(true)
+				.sameSite("None")
+				.maxAge(Duration.ofDays(10))
+				.build();
+			httpHeaders.set(HttpHeaders.SET_COOKIE, cookie.toString());
 			return ResponseEntity
 				.ok()
 				.headers(httpHeaders)
@@ -74,5 +132,17 @@ public class AuthController {
 	@PostMapping("/post")
 	public ResponseEntity<String> postTest(@RequestBody AuthDto.SignInReq req) {
 		return ResponseEntity.ok("Got Body " + req.getUsername());
+	}
+
+	@GetMapping("/cookie")
+	public ResponseEntity<String> cookieTest(ServerWebExchange exchange) {
+		MultiValueMap<String, HttpCookie> cookies = exchange.getRequest().getCookies();
+		StringBuilder sb = new StringBuilder();
+		for (String s : cookies.keySet()) {
+			sb.append("key : ").append(s).append(" / val : ")
+				.append(cookies.get(s))
+				.append("\n");
+		}
+		return ResponseEntity.ok(sb.toString());
 	}
 }
