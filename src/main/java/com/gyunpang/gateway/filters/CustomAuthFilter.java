@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 
-import com.gyunpang.gateway.utils.CommonCode;
+import com.gyunpang.gateway.utils.GatewayConstant;
 import com.gyunpang.gateway.utils.JwtUtil;
 
 import io.jsonwebtoken.Claims;
@@ -40,13 +40,13 @@ public class CustomAuthFilter extends AbstractGatewayFilterFactory<CustomAuthFil
 					Claims payload = claims.getPayload();
 
 					String authority = String.valueOf(
-						payload.getOrDefault(CommonCode.HEADER_AUTHORITY.getContext(), ""));
-					String username = String.valueOf(payload.getOrDefault(CommonCode.HEADER_USERNAME.getContext(), ""));
+						payload.getOrDefault(GatewayConstant.HEADER_AUTHORITY, ""));
+					String username = String.valueOf(payload.getOrDefault(GatewayConstant.HEADER_USERNAME, ""));
 					log.info("got authority : {} username: {}", authority, username);
 					ServerHttpRequest request = exchange.getRequest();
 
-					request.mutate().header(CommonCode.HEADER_AUTHORITY.getContext(), authority);
-					request.mutate().header(CommonCode.HEADER_USERNAME.getContext(), username);
+					request.mutate().header(GatewayConstant.HEADER_AUTHORITY, authority);
+					request.mutate().header(GatewayConstant.HEADER_USERNAME, username);
 					request.mutate().headers(httpHeaders -> httpHeaders.remove("Authorization"));
 					return chain.filter(exchange);
 				} catch (Exception e) {

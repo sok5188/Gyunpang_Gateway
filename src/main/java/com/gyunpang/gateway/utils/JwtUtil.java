@@ -55,8 +55,8 @@ public class JwtUtil {
 			.issuedAt(Date.from(LocalDateTime.now().toInstant(ZoneOffset.ofHours(9))))
 			.expiration(expireDate)
 			.signWith(key)
-			.claim(CommonCode.HEADER_USERNAME.getContext(), subject)
-			.claim(CommonCode.HEADER_AUTHORITY.getContext(), String.valueOf(authority))
+			.claim(GatewayConstant.HEADER_USERNAME, subject)
+			.claim(GatewayConstant.HEADER_AUTHORITY, String.valueOf(authority))
 			.compact();
 	}
 
@@ -85,11 +85,11 @@ public class JwtUtil {
 		try {
 			Jws<Claims> claims = getClaims(token);
 			String subject = claims.getPayload().getSubject();
-			if (!claims.getPayload().containsKey(CommonCode.HEADER_AUTHORITY.getContext())) {
+			if (!claims.getPayload().containsKey(GatewayConstant.HEADER_USERNAME)) {
 				throw new AccessDeniedException("Fail to check");
 			}
 			return generateToken(subject,
-				Integer.parseInt((String)claims.getPayload().get(CommonCode.HEADER_AUTHORITY.getContext())));
+				Integer.parseInt((String)claims.getPayload().get(GatewayConstant.HEADER_USERNAME)));
 		} catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
 			failReason = "잘못된 JWT 서명입니다.";
 		} catch (ExpiredJwtException e) {
