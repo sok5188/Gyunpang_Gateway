@@ -1,5 +1,6 @@
 package com.gyunpang.gateway.utils;
 
+import java.nio.file.AccessDeniedException;
 import java.security.Key;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -32,12 +33,12 @@ public class JwtUtil {
 		this.key = Keys.hmacShaKeyFor(decode);
 	}
 
-	public AuthDto.SignInRes generateToken(String username) {
-		String accessToken = createToken(username,
+	public AuthDto.SignInRes generateToken(String username, Integer authority) {
+		String accessToken = createToken(username, authority,
 			Date.from(
 				LocalDateTime.now().plusMinutes(30).toInstant(ZoneOffset.ofHours(9))
 			));
-		String refreshToken = createToken(username,
+		String refreshToken = createToken(username, authority,
 			Date.from(
 				LocalDateTime.now().plusDays(10)
 					.toInstant(ZoneOffset.ofHours(9))
@@ -48,16 +49,18 @@ public class JwtUtil {
 			.build();
 	}
 
-	private String createToken(String subject, Date expireDate) {
+	private String createToken(String subject, Integer authority, Date expireDate) {
 		return Jwts.builder()
 			.subject(subject)
 			.issuedAt(Date.from(LocalDateTime.now().toInstant(ZoneOffset.ofHours(9))))
 			.expiration(expireDate)
 			.signWith(key)
+			.claim(CommonCode.HEADER_USERNAME.getContext(), subject)
+			.claim(CommonCode.HEADER_AUTHORITY.getContext(), String.valueOf(authority))
 			.compact();
 	}
 
-	private Jws<Claims> getClaims(String token) {
+	public Jws<Claims> getClaims(String token) {
 		return Jwts.parser().verifyWith((SecretKey)key).build().parseSignedClaims(token);
 	}
 
@@ -82,7 +85,11 @@ public class JwtUtil {
 		try {
 			Jws<Claims> claims = getClaims(token);
 			String subject = claims.getPayload().getSubject();
-			return generateToken(subject);
+			if (!claims.getPayload().containsKey(CommonCode.HEADER_AUTHORITY.getContext())) {
+				throw new AccessDeniedException("Fail to check");
+			}
+			return generateToken(subject,
+				Integer.parseInt((String)claims.getPayload().get(CommonCode.HEADER_AUTHORITY.getContext())));
 		} catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
 			failReason = "잘못된 JWT 서명입니다.";
 		} catch (ExpiredJwtException e) {
@@ -91,6 +98,8 @@ public class JwtUtil {
 			failReason = "지원되지 않는 JWT 토큰입니다.";
 		} catch (IllegalArgumentException e) {
 			failReason = "JWT 토큰이 잘못되었습니다.";
+		} catch (AccessDeniedException e) {
+			failReason = "유저 권한이 확인되지 않습니다.";
 		}
 		return AuthDto.SignInRes.builder().failReason(failReason).build();
 	}

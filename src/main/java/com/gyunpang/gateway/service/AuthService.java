@@ -19,16 +19,15 @@ public class AuthService {
 		return jwtUtil.tryRefreshToken(token);
 	}
 
-	public boolean trySignInWithPassword(AuthDto.SignInReq req) {
+	public Integer trySignInWithPassword(AuthDto.SignInReq req) {
 		if (req.getUsername().isEmpty() || req.getPassword().isEmpty())
-			return false;
+			return -1;
 
-		webClientService.sendSignInRequest(req);
-		return true;
+		return webClientService.sendSignInRequest(req).block();
 	}
 
-	public AuthDto.SignInRes getAuthTokens(String username) {
-		return jwtUtil.generateToken(username);
+	public AuthDto.SignInRes getAuthTokens(String username, Integer authority) {
+		return jwtUtil.generateToken(username, authority);
 	}
 
 	public boolean validateToken(String token) {

@@ -9,7 +9,10 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 
 import com.gyunpang.gateway.utils.CommonCode;
+import com.gyunpang.gateway.utils.JwtUtil;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -19,11 +22,11 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class CustomAuthFilter extends AbstractGatewayFilterFactory<CustomAuthFilter.Config> {
 
-	private final TokenProvider tokenProvider;
+	private final JwtUtil jwtUtil;
 
-	public CustomAuthFilter(TokenProvider tokenProvider) {
+	public CustomAuthFilter(JwtUtil jwtUtil) {
 		super(Config.class);
-		this.tokenProvider = tokenProvider;
+		this.jwtUtil = jwtUtil;
 	}
 
 	@Override
@@ -33,8 +36,16 @@ public class CustomAuthFilter extends AbstractGatewayFilterFactory<CustomAuthFil
 			if (StringUtils.hasText(authorizationHeader) && authorizationHeader.startsWith(config.granted + " ")) {
 				String token = authorizationHeader.substring(7); // Bearer
 				try {
-					String username = tokenProvider.validateTokenAndGetUsername(token);
+					Jws<Claims> claims = jwtUtil.getClaims(token);
+					Claims payload = claims.getPayload();
+
+					String authority = String.valueOf(
+						payload.getOrDefault(CommonCode.HEADER_AUTHORITY.getContext(), ""));
+					String username = String.valueOf(payload.getOrDefault(CommonCode.HEADER_USERNAME.getContext(), ""));
+					log.info("got authority : {} username: {}", authority, username);
 					ServerHttpRequest request = exchange.getRequest();
+
+					request.mutate().header(CommonCode.HEADER_AUTHORITY.getContext(), authority);
 					request.mutate().header(CommonCode.HEADER_USERNAME.getContext(), username);
 					request.mutate().headers(httpHeaders -> httpHeaders.remove("Authorization"));
 					return chain.filter(exchange);

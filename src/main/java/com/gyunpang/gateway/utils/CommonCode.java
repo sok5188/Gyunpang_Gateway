@@ -4,9 +4,11 @@ import lombok.Getter;
 
 @Getter
 public enum CommonCode {
-	HEADER_USERNAME("username");
+	HEADER_USERNAME("username"),
+	HEADER_AUTHORITY("authority");
 	private String context;
-	CommonCode(String context){
+
+	CommonCode(String context) {
 		this.context = context;
 	}
 }

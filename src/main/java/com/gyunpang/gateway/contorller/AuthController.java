@@ -28,6 +28,7 @@ import com.gyunpang.gateway.utils.GatewayConstant;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 
 @Controller
 @Slf4j
@@ -42,45 +43,59 @@ public class AuthController {
 	private final AuthService authService;
 
 	@PostMapping("/signin")
-	public ResponseEntity<AuthDto.SignInRes> signIn(@RequestHeader Map<String, String> headers,
+	public Mono<ResponseEntity<AuthDto.SignInRes>> signIn(@RequestHeader Map<String, String> headers,
 		@RequestBody AuthDto.SignInReq req, ServerWebExchange exchange) {
 		log.info("try sign in");
 		AuthDto.SignInRes res = AuthDto.SignInRes.builder().build();
 		MultiValueMap<String, HttpCookie> cookies = exchange.getRequest().getCookies();
 
-		//Try With AccessToken
-		if (headers.containsKey(GatewayConstant.ACCESS_TOKEN)) {
-			res = authService.trySignInWithToken(headers.get(GatewayConstant.ACCESS_TOKEN));
-		}
 		//Try With RefreshToken
 		if (Optional.ofNullable(res.getAccessToken()).isEmpty() && cookies.containsKey(GatewayConstant.REFRESH_TOKEN)) {
+			log.info("refresh is present");
 			res = authService.trySignInWithToken(
 				Objects.requireNonNull(cookies.getFirst(GatewayConstant.REFRESH_TOKEN)).getValue());
+			Mono<ResponseEntity<AuthDto.SignInRes>> monoRes = tryReturnAuthResponse(
+				res);
+			if (monoRes != null)
+				return monoRes;
 		}
+
 		//Try With auth info
-		if (Optional.ofNullable(res.getAccessToken()).isEmpty() && authService.trySignInWithPassword(req)) {
-			res = authService.getAuthTokens(req.getUsername());
+		if (Optional.ofNullable(res.getAccessToken()).isEmpty()) {
+			log.info("try auth info");
+			Mono<ResponseEntity<AuthDto.SignInRes>> monoRes = tryReturnAuthResponse(
+				authService.getAuthTokens(req.getUsername(), authService.trySignInWithPassword(req)));
+			if (monoRes != null)
+				return monoRes;
 		}
 
-		if (Optional.ofNullable(res.getAccessToken()).isPresent()) {
-			HttpHeaders httpHeaders = new HttpHeaders();
-			httpHeaders.set(GatewayConstant.ACCESS_TOKEN, res.getAccessToken());
+		log.info("try auth info TT");
+		return Mono.just(ResponseEntity.badRequest().body(res));
+	}
 
-			ResponseCookie cookie = ResponseCookie.from(GatewayConstant.REFRESH_TOKEN, res.getRefreshToken())
-				.httpOnly(true)
-				.secure(true)
-				.sameSite("None")
-				.maxAge(Duration.ofDays(10))
-				.build();
-			httpHeaders.set(HttpHeaders.SET_COOKIE, cookie.toString());
-			return ResponseEntity
+	private static Mono<ResponseEntity<AuthDto.SignInRes>> tryReturnAuthResponse(AuthDto.SignInRes res) {
+		if (Optional.ofNullable(res.getAccessToken()).isPresent()) {
+			HttpHeaders httpHeaders = setAuthorized(res);
+			return Mono.just(ResponseEntity
 				.ok()
 				.headers(httpHeaders)
-				.body(res);
-		} else {
-			log.info("fail");
-			return ResponseEntity.badRequest().body(res);
+				.body(res));
 		}
+		return null;
+	}
+
+	private static HttpHeaders setAuthorized(AuthDto.SignInRes res) {
+		HttpHeaders httpHeaders = new HttpHeaders();
+		httpHeaders.set(GatewayConstant.ACCESS_TOKEN, res.getAccessToken());
+
+		ResponseCookie cookie = ResponseCookie.from(GatewayConstant.REFRESH_TOKEN, res.getRefreshToken())
+			.httpOnly(true)
+			.secure(true)
+			.sameSite("None")
+			.maxAge(Duration.ofDays(10))
+			.build();
+		httpHeaders.set(HttpHeaders.SET_COOKIE, cookie.toString());
+		return httpHeaders;
 	}
 
 	@DeleteMapping("/signout")
@@ -109,16 +124,7 @@ public class AuthController {
 		}
 
 		if (Optional.ofNullable(res.getAccessToken()).isPresent()) {
-			HttpHeaders httpHeaders = new HttpHeaders();
-			httpHeaders.set(GatewayConstant.ACCESS_TOKEN, res.getAccessToken());
-
-			ResponseCookie cookie = ResponseCookie.from(GatewayConstant.REFRESH_TOKEN, res.getRefreshToken())
-				.httpOnly(true)
-				.secure(true)
-				.sameSite("None")
-				.maxAge(Duration.ofDays(10))
-				.build();
-			httpHeaders.set(HttpHeaders.SET_COOKIE, cookie.toString());
+			HttpHeaders httpHeaders = setAuthorized(res);
 			return ResponseEntity
 				.ok()
 				.headers(httpHeaders)
