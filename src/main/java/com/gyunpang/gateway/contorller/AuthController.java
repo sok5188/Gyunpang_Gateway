@@ -34,7 +34,7 @@ import reactor.core.publisher.Mono;
 @Slf4j
 @RequiredArgsConstructor
 @RequestMapping("/gateway")
-@CrossOrigin(origins = {"https://localhost:3000", "https://sirong.shop"}
+@CrossOrigin(origins = {"http://localhost:3000", "https://sirong.shop"}
 	, methods = {RequestMethod.GET, RequestMethod.PUT, RequestMethod.POST, RequestMethod.DELETE, RequestMethod.OPTIONS}
 	, exposedHeaders = {GatewayConstant.ACCESS_TOKEN, HttpHeaders.SET_COOKIE}
 	, allowCredentials = "true")
@@ -50,7 +50,7 @@ public class AuthController {
 		MultiValueMap<String, HttpCookie> cookies = exchange.getRequest().getCookies();
 
 		//Try With RefreshToken
-		if (Optional.ofNullable(res.getAccessToken()).isEmpty() && cookies.containsKey(GatewayConstant.REFRESH_TOKEN)) {
+		if (cookies.containsKey(GatewayConstant.REFRESH_TOKEN)) {
 			log.info("refresh is present");
 			res = authService.trySignInWithToken(
 				Objects.requireNonNull(cookies.getFirst(GatewayConstant.REFRESH_TOKEN)).getValue());
@@ -61,10 +61,11 @@ public class AuthController {
 		}
 
 		//Try With auth info
-		if (Optional.ofNullable(res.getAccessToken()).isEmpty()) {
+		Integer authType = authService.trySignInWithPassword(req);
+		if (authType != -1) {
 			log.info("try auth info");
 			Mono<ResponseEntity<AuthDto.SignInRes>> monoRes = tryReturnAuthResponse(
-				authService.getAuthTokens(req.getUsername(), authService.trySignInWithPassword(req)));
+				authService.getAuthTokens(req.getUsername(), authType));
 			if (monoRes != null)
 				return monoRes;
 		}
@@ -100,11 +101,12 @@ public class AuthController {
 
 	@DeleteMapping("/signout")
 	public ResponseEntity<String> signOut(ServerWebExchange exchange) {
+		log.info("sign out");
 		ResponseCookie cookie = ResponseCookie.from(GatewayConstant.REFRESH_TOKEN, "")
-			.maxAge(0) // 쿠키 만료
-			.path("/") // 쿠키의 경로 설정 (서버에서 쿠키 설정한 경로와 동일해야 함)
-			.httpOnly(true) // HTTPOnly 쿠키 설정
-			.secure(true)   // HTTPS에서만 쿠키 사용
+			.maxAge(0)
+			.httpOnly(true)
+			.secure(true)
+			.sameSite("None")
 			.build();
 
 		return ResponseEntity.ok()
@@ -114,7 +116,7 @@ public class AuthController {
 
 	@PutMapping("/refresh")
 	public ResponseEntity<AuthDto.SignInRes> refreshToken(ServerWebExchange exchange) {
-		log.info("try sign in");
+		log.info("try refresh");
 		AuthDto.SignInRes res = AuthDto.SignInRes.builder().build();
 		MultiValueMap<String, HttpCookie> cookies = exchange.getRequest().getCookies();
 
