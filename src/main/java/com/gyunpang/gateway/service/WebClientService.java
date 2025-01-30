@@ -22,15 +22,15 @@ public class WebClientService {
 	@Value(value = "${api.backend-host}")
 	private String backendHost;
 
-	public Mono<String> sendSignInRequest(AuthDto.SignInReq req) {
+	public Mono<Integer> sendSignInRequest(AuthDto.SignInReq req) {
 		return getWebClient()
 			.put()
-			.uri("/open/signIn")
+			.uri("/open/auth/signIn")
 			.contentType(MediaType.APPLICATION_JSON)
 			.accept(MediaType.APPLICATION_JSON)
 			.bodyValue(req)
 			.retrieve()
-			.bodyToMono(String.class)
+			.bodyToMono(Integer.class)
 			.onErrorResume(Mono::error);
 	}
 
