@@ -30,7 +30,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gyunpang.gateway.event.kafka.KafkaMessageProduceEvent;
 import com.gyunpang.gateway.event.kafka.KafkaMessageProduceEventPublisher;
-import com.gyunpang.gateway.utils.CommonCode;
+import com.gyunpang.gateway.utils.GatewayConstant;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -122,9 +122,9 @@ public class LoggingGlobalFilter implements GlobalFilter, Ordered {
 		}
 
 		log.info("[log] try set username");
-		if (request.getHeaders().containsKey(CommonCode.HEADER_USERNAME.getContext())) {
+		if (request.getHeaders().containsKey(GatewayConstant.HEADER_USERNAME)) {
 			log.info("[log] try set username 2");
-			map.put("username", request.getHeaders().getFirst(CommonCode.HEADER_USERNAME.getContext()));
+			map.put("username", request.getHeaders().getFirst(GatewayConstant.HEADER_USERNAME));
 		}
 	}
 
