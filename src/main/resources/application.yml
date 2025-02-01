@@ -3,6 +3,10 @@ spring:
     web-application-type: reactive
   kafka:
     bootstrap-servers: { kafka-server }
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   cloud:
     gateway:
       default-filters:
